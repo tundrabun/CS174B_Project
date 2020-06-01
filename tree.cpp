@@ -143,6 +143,18 @@ void insert( int i ) {
     return;
 }
 
+void printTree(node* n) {
+    std::cout << std::endl;
+    int count;
+    for( count = 0; count < n->num; count++) {
+        if(n->leaf == false) { printTree(n->pointers[count]);}
+        std::cout << " " << n->data[count];
+    }
+    if( n->leaf == false) { printTree(n->pointers[count]);}
+    std::cout << std::endl;
+}
+
+
 node* searchHelper(node* n, int s) {
     int j;
     for(j=0; j < n->num; j++) {
@@ -160,5 +172,11 @@ node* search( int i ) {
     int j;
     node* temp = root;
 
-    
+    return searchHelper(root, i);
+}
+
+int main() {
+    std::cout << "Hello World" << std::endl;
+
+    printTree(root);
 }
