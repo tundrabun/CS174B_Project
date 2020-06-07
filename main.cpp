@@ -2,6 +2,7 @@
 #include <fstream>
 #include <stdlib.h>
 #include <algorithm>
+#include <vector>
 
 #define CAPACITY 6
 using namespace std;
@@ -40,7 +41,6 @@ public:
     BpTree(){root = NULL; height = 0;}
     void insert(int data, int rid);
     void insert_internal_key(int key, Node* parent, Node* new_node);
-    int search(int data);
     void print(Node* root);
     void printall(Node* root);
     void printnode(Node* node);
@@ -51,6 +51,13 @@ public:
     Node* firstnode();
     bool Only1Link(Node* node);
     Node* nextleaf(Node* node);
+
+    
+    bool search(Node* current, int data);
+    void persistToFile(Node* current);
+    void persistFromFile();
+
+
     Node* root;
     int height;
 };
@@ -329,6 +336,25 @@ void BpTree::printall(Node* current){
     }
 }
 
+bool BpTree::search(Node* current, int n) {
+    Node* temp = current;
+    if( temp == NULL) return false;
+
+    for(int i = 0; i < temp->size; i++) {
+        if(temp->keys[i] == n)
+            return true;
+    }
+
+    bool currentloop = false;
+    for(int i = 0; i < temp->size+1; i++) {
+        if( search(temp->children_ptrs[i], n) == true )
+            currentloop = true;
+    }
+    return currentloop;
+
+    return false;
+}
+
 
 void BpTree::insert_internal_key(int key, Node* node_to_insert_in, Node* new_right_node){
         //cout<<"INSERTING_INTERNAL_KEY: " << key << " AT:"<<endl;
@@ -497,6 +523,58 @@ void BpTree::insert_internal_key(int key, Node* node_to_insert_in, Node* new_rig
     
 }
 
+void persistHelper(Node* current, std::vector<int> &v) {
+    Node* temp = current;
+    if( temp == NULL ) return;
+    for(int i = 0; i < temp->size; i++)
+        v.push_back(temp->keys[i]);
+
+    v.push_back(-1);
+    for(int i = 0; i < temp->size+1; i++)
+        persistHelper( current->children_ptrs[i], v);
+
+    return;
+}
+
+void BpTree::persistFromFile() {
+    fstream file;
+    file.open("tree.txt");
+
+    if(file.fail()) {
+        std::cout << "ERROR: Unable to find current tree, exiting." << std::endl;
+        exit(1);
+    }
+
+    std::string t;
+    int temp;
+
+    while(file >> t) {
+        temp = stoi(t);
+
+        if(!search(root,temp))
+            insert(temp,temp);
+    }
+    return;
+}
+
+void BpTree::persistToFile(Node* current) {
+    std::vector<int> p;
+    persistHelper( current, p);
+
+    fstream file;
+    file.open("tree.txt", fstream::out);
+
+    for(int i = 0; i < p.size(); i++) {
+        int current = p[i];
+
+        if(current == -1) file << '\n';
+        else if(i+1 == p.size()) file << current;
+        else file << current << " ";
+    }
+    file.close();
+    return;
+}
+
 
 int main(){
     BpTree tree;
@@ -504,11 +582,47 @@ int main(){
     file.open("input_data.txt");
     Record data[1000000];
     int size = 0;
-    while(file >> data[size].key >> data[size].rid){
-        //tree.insert(data[size].key,data[size].rid);
-        size++;
+
+    std::cout << "Select an option (-1 to exit):\n1) Load New Data\n2) Load Current Tree\nINPUT: ";
+
+    int choice;
+    while(true) {
+        std::cin >> choice;
+        if(choice == 1) {
+            while(file >> data[size].key >> data[size].rid){
+            //tree.insert(data[size].key,data[size].rid);
+                size++;
+            }
+            tree.BulkLoad(data, size,75);
+            break;
+        }
+        else if(choice == 2) {
+            tree.persistFromFile();
+            break;
+        }
+        else if(choice == -1)
+            exit(0);
+        else
+            std::cout << "INVALID INPUT: ";
     }
-    tree.BulkLoad(data, size,75);
+
+    std::cout << std::endl;
     tree.print(tree.root);
+
+    tree.persistToFile(tree.root);
+    
+
+    while(true) {
+        std::cout << std::endl << "Search for a value (-1 to exit): ";
+        int searchval;
+        std::cin >> searchval;
+
+        if(searchval == -1) break;
+
+        if( tree.search(tree.root, searchval) == true )
+            std::cout << "Found" << std::endl;
+        else std::cout << "Not Found" << std::endl;
+    }
+
     return 0;
 }
